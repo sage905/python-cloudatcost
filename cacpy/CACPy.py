@@ -21,11 +21,11 @@ SERVER_DELETE_URL = "/cloudpro/delete.php"
 RESOURCE_URL = "/cloudpro/resources.php"
 
 
-class CACPy:
+class CACPy(object):
     """Base class for making requests to the cloud at cost API.
     """
 
-    def __init__(self, email, api_key):
+    def __init__(self, email, api_key, timeout=30):
         """Return a CACPy object.
 
         Required Arguments:
@@ -34,8 +34,11 @@ class CACPy:
         """
         self.email = email
         self.api_key = api_key
+        self.timeout = timeout
 
-    def _make_request(self, endpoint, options=dict(), type="GET"):
+    def _make_request(self, endpoint, options=None, type="GET"):
+        if options is None:
+            options = dict()
         data = {
             'key': self.api_key,
             'login': self.email
@@ -48,11 +51,10 @@ class CACPy:
 
         url = BASE_URL + API_VERSION + endpoint
 
-        ret = None
         if type == "GET":
-            ret = requests.get(url, params=data)
+            ret = requests.get(url, params=data, timeout=self.timeout)
         elif type == "POST":
-            ret = requests.post(url, data=data)
+            ret = requests.post(url, data=data, timeout=self.timeout)
         else:
             raise Exception("InvalidRequestType: " + str(type))
 
