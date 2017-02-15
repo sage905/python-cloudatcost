@@ -1,6 +1,7 @@
 # Python API Wrapper for cloudatcost.com
 
 import requests
+import attr
 
 BASE_URL = "https://panel.cloudatcost.com/api/"
 API_VERSION = "v1"
@@ -58,6 +59,9 @@ class CACPy(object):
         else:
             raise Exception("InvalidRequestType: " + str(type))
 
+        if ret.status_code != 200:
+            raise IOError("CAC API did not return valid response.  Status Code: " + str(ret.status_code))
+
         return ret.json()
 
     def _commit_power_operation(self, server_id, operation):
@@ -84,6 +88,8 @@ class CACPy(object):
         The dictionaries will contain keys consistent with the 'data'
         portion of the JSON as documented here:
         https://github.com/cloudatcost/api#list-templates
+        NOTE: The format of data returned by this has changed from what is posted in the documentation
+
         """
         return self._make_request(LIST_TEMPLATES_URL)
 
@@ -244,7 +250,7 @@ class CACPy(object):
                     get_server_info()
         """
         options = {
-          'sid': server_id
+            'sid': server_id
         }
         return self._make_request(SERVER_DELETE_URL,
                                   options=options,
@@ -256,3 +262,110 @@ class CACPy(object):
 
         return self._make_request(RESOURCE_URL,
                                   type="GET")
+
+    def get_template(self, desc=None, template_id=None):
+        """Return a CACTemplate after querying the Cloudatcost API for a list of templates for a match.
+
+        Required Arguments:
+        api_connection - CACPy object to use for connection
+        desc - Description to be matched (or use template_id)
+        template_id - Template ID to be matched (or use desc)
+
+        Raises:
+        LookupError if desc or template_id can't be found
+        ValueError if no lookup parameters are provided
+        """
+        if isinstance(template_id, int):
+            template_id = str(template_id)
+        templates = self.get_template_info()['data']
+
+        if template_id is not None:
+            try:
+                template = next(template for template in templates if template.get('ce_id') == template_id)
+            except StopIteration:
+                raise LookupError("Template with ID: " + template_id + " was not found")
+            return CACTemplate(template.get('name'), template_id)
+        elif desc is not None:
+            try:
+                template = next(template for template in templates if template.get('name') == desc)
+            except StopIteration:
+                raise LookupError("Template with description: " + desc + " was not found")
+            return CACTemplate(desc, template.get('ce_id'))
+        else:
+            raise ValueError("One of 'desc' or 'template_id' must be provided to template lookup.")
+
+
+@attr.s
+class CACTemplate(object):
+    """ Mapping of CAC template description and ID
+    """
+
+    desc = attr.ib(convert=str)
+    template_id = attr.ib(convert=str)
+
+
+class CACServer(object):
+    """Represent a server instance at cloudatost.
+    """
+
+    __attrs__ = ('uid', 'servername', 'sdate', 'sid', 'label', 'rdns', 'cpu', 'ram', 'storage', 'panel_note',
+                 'rootpass', 'ip', 'netmask', 'gateway', 'status', 'mode', 'servertype', 'ramusage', 'cpuusage',
+                 'hdusage')
+
+    def __init__(self, api_connection, template=None, **kwargs):
+        assert isinstance(api_connection, CACPy)
+
+        self.api_connection = api_connection
+
+        [setattr(self, name, kwargs.get(name)) for name in CACServer.__attrs__]
+
+        if template is not None:
+            self.template = api_connection.get_template(desc=template)
+
+    def __repr__(self):
+        return ('{cls.__name__}(api_account={self.api_connection.email}, sid={self.sid}, '
+                'label={self.label})').format(
+            cls=type(self), self=self)
+
+    @classmethod
+    def get(cls, api_connection, sid=None, label=None):
+        """Get a CACServer Instance.
+
+        If neither sid nor label are specified, returns an empty instance.
+        If both sid and label are specified, sid takes precedence.
+
+        :param api_connection: CACPy api_connection instance to bind to
+        :param sid: Server ID to lookup
+        :param label: Server label to lookup
+        :return: CACServer Instance
+        """
+        assert isinstance(api_connection, CACPy)
+        for key,value in (('sid', sid ), ('label', label)):
+            if value is not None:
+                try:
+                    server = next(
+                        server for server in api_connection.get_server_info().get('data') if server[key] == value)
+                except StopIteration:
+                    raise LookupError("Server with " + key + ": " + value + " was not found.")
+                return CACServer(api_connection, **server)
+
+        return CACServer(api_connection)
+
+        # class Ram(object):
+        #     def __init__(self, name, default=None):
+        #         self.name = name
+        #         self.default = default
+        #
+        #     def __get__(self, instance, owner):
+        #         return getattr(instance, self.name, self.default)
+        #
+        #     def clean(self, value):
+        #         if isinstance(value, int) or str(value).isdigit():
+        #             return int(value)
+        #         return value
+        #
+        #     def __set__(self, instance, value):
+        #         if isinstance(self.clean(value), int):
+        #             setattr(instance, self.name, value)
+        #         else:
+        #             raise TypeError('`{}` not a valid integer'.format(value))
