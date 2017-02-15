@@ -1,4 +1,4 @@
-from CACPy import CACPy, CACServer, BASE_URL, API_VERSION, LIST_SERVERS_URL, LIST_TEMPLATES_URL
+from cacpy.CACPy import CACPy, BASE_URL, API_VERSION, LIST_SERVERS_URL, LIST_TEMPLATES_URL
 import pytest
 
 V1_LISTSERVERS_RESPONSE = {u'status': u'ok', u'action': u'listservers', u'api': u'v1', u'data': [
@@ -24,12 +24,6 @@ V1_LIST_TEMPLATES_RESPONSE = {u'status': u'ok', u'action': u'listtemplates', u'a
                                         {u'ce_id': u'74', u'name': u'FreeBSD-10-1-64bit'}], u'time': 1487027299}
 
 
-# This method will be used by the mock to replace requests.get_template in all tests
-@pytest.fixture(autouse=True)
-def simulate_get(monkeypatch):
-    monkeypatch.setattr("requests.get", mocked_requests_get)
-
-
 def mocked_requests_get(*args, **kwargs):
     class MockResponse(object):
         def __init__(self, json_data, status_code):
@@ -45,23 +39,14 @@ def mocked_requests_get(*args, **kwargs):
     }.get(args[0], MockResponse('', 404))
 
 
-class TestServerClass(object):
-    def test_template_lookup(self):
-        cac_api = CACPy('test@user.com', 'testkey')
-        template = cac_api.get_template(template_id='27')
-        assert template.desc == "Ubuntu-14.04.1-LTS-64bit"
+# This method will be used by the mock to replace requests.get_template in all tests
+@pytest.fixture(autouse=True)
+def simulate_get(monkeypatch):
+    monkeypatch.setattr("requests.get", mocked_requests_get)
 
-    def test_get_empty_server(self):
-        api_connection = CACPy('test@user.com', 'testkey')
-        server = CACServer.get(api_connection)
-        assert (isinstance(server, CACServer))
-        assert (server.api_connection == api_connection)
 
-    def test_get_server_by_sid(self):
-        api_connection = CACPy('test@user.com', 'testkey')
+@pytest.fixture()
+def cac_api():
+    return CACPy('test@user.com', 'testkey')
 
-        pytest.raises(LookupError, CACServer.get, api_connection, sid='12345789')
 
-        server = CACServer.get(api_connection, sid='123456789')
-        assert (server.sid == '123456789')
-        assert (server.template == api_connection.get_template(template_id=26))

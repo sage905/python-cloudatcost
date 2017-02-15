@@ -294,6 +294,26 @@ class CACPy(object):
         else:
             raise ValueError("One of 'desc' or 'template_id' must be provided to template lookup.")
 
+    def get_server(self, sid=None, label=None):
+        """Get a CACServer Instance.
+
+        If neither sid nor label are specified, returns an empty instance.
+        If both sid and label are specified, sid takes precedence.
+
+        :param sid: Server ID to lookup
+        :param label: Server label to lookup
+        :return: CACServer Instance
+        """
+        for key,value in (('sid', sid ), ('label', label)):
+            if value is not None:
+                try:
+                    server = next(
+                        server for server in self.get_server_info().get('data') if server[key] == value)
+                except StopIteration:
+                    raise LookupError("Server with " + key + ": " + value + " was not found.")
+                return CACServer(self, **server)
+
+        return CACServer(self)
 
 @attr.s
 class CACTemplate(object):
@@ -327,29 +347,6 @@ class CACServer(object):
                 'label={self.label})').format(
             cls=type(self), self=self)
 
-    @classmethod
-    def get(cls, api_connection, sid=None, label=None):
-        """Get a CACServer Instance.
-
-        If neither sid nor label are specified, returns an empty instance.
-        If both sid and label are specified, sid takes precedence.
-
-        :param api_connection: CACPy api_connection instance to bind to
-        :param sid: Server ID to lookup
-        :param label: Server label to lookup
-        :return: CACServer Instance
-        """
-        assert isinstance(api_connection, CACPy)
-        for key,value in (('sid', sid ), ('label', label)):
-            if value is not None:
-                try:
-                    server = next(
-                        server for server in api_connection.get_server_info().get('data') if server[key] == value)
-                except StopIteration:
-                    raise LookupError("Server with " + key + ": " + value + " was not found.")
-                return CACServer(api_connection, **server)
-
-        return CACServer(api_connection)
 
         # class Ram(object):
         #     def __init__(self, name, default=None):
