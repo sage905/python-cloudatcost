@@ -308,8 +308,10 @@ class CACPy(object):
             return None
 
         server['api'] = self
-        return CACServer(**{getattr(skey, 'name'): server.get(getattr(skey, 'name'), None) for skey in
-                            attr.fields(CACServer)})
+        print attr.fields(CACServer)
+        params = dict(
+            [(getattr(skey, 'name'), server.get(getattr(skey, 'name'), None)) for skey in attr.fields(CACServer)])
+        return CACServer(**params)
 
 
 @attr.s
@@ -317,8 +319,8 @@ class CACTemplate(object):
     """ Mapping of CAC template description and ID
     """
 
-    desc = attr.ib(convert=str)
-    template_id = attr.ib(convert=str)
+    desc = attr.ib()
+    template_id = attr.ib()
 
 
 @attr.s()
