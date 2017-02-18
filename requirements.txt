@@ -1,5 +1,5 @@
 attrs==15.1.0
-pytest==3.0.6
+pytest>=3.0.6
 pytest-runner==2.11.1
 requests==2.13.0
 mock==2.0.0

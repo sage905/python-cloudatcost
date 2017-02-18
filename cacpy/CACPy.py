@@ -308,7 +308,7 @@ class CACPy(object):
             return None
 
         server['api'] = self
-        print attr.fields(CACServer)
+        print(attr.fields(CACServer))
         params = dict(
             [(getattr(skey, 'name'), server.get(getattr(skey, 'name'), None)) for skey in attr.fields(CACServer)])
         return CACServer(**params)

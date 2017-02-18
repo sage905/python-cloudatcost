@@ -1,5 +1,6 @@
 import pytest
 
+
 class TestServerClass(object):
 
     def test_template_lookup(self, cac_api):

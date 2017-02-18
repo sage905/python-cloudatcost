@@ -1,27 +1,27 @@
 from cacpy.CACPy import CACPy, BASE_URL, API_VERSION, LIST_SERVERS_URL, LIST_TEMPLATES_URL
 import pytest
 
-V1_LISTSERVERS_RESPONSE = {u'status': u'ok', u'action': u'listservers', u'api': u'v1', u'data': [
-    {u'sdate': u'07/14/2015', u'uid': u'4482712345', u'ip': u'10.1.1.2',
-     u'servername': u'c123456789-cloudpro-123456789', u'ram': u'2048', u'portgroup': u'Cloud-ip-123',
-     u'id': u'123456789', u'label': u'serverlabel', u'vmname': u'c90000-CloudPRO-123456789-123456789',
-     u'gateway': u'10.1.1.1', u'hdusage': u'5.123456789', u'rdns': u'server.test.example',
-     u'rootpass': u'password',
-     u'vncport': u'12345', u'hostname': u'server.test.example', u'storage': u'10', u'cpuusage': u'26',
-     u'template': u'CentOS-7-64bit', u'sid': u'123456789', u'vncpass': u'secret', u'status': u'Powered On',
-     u'lable': u'serverlabel', u'servertype': u'cloudpro', u'rdnsdefault': u'notassigned.cloudatcost.com',
-     u'netmask': u'255.255.255.0', u'ramusage': u'763.086', u'mode': u'Normal', u'packageid': u'15',
-     u'panel_note': u'testnote', u'cpu': u'4'}], u'time': 1487000464}
+V1_LISTSERVERS_RESPONSE = {'status': 'ok', 'action': 'listservers', 'api': 'v1', 'data': [
+    {'sdate': '07/14/2015', 'uid': '4482712345', 'ip': '10.1.1.2',
+     'servername': 'c123456789-cloudpro-123456789', 'ram': '2048', 'portgroup': 'Cloud-ip-123',
+     'id': '123456789', 'label': 'serverlabel', 'vmname': 'c90000-CloudPRO-123456789-123456789',
+     'gateway': '10.1.1.1', 'hdusage': '5.123456789', 'rdns': 'server.test.example',
+     'rootpass': 'password',
+     'vncport': '12345', 'hostname': 'server.test.example', 'storage': '10', 'cpuusage': '26',
+     'template': 'CentOS-7-64bit', 'sid': '123456789', 'vncpass': 'secret', 'status': 'Powered On',
+     'lable': 'serverlabel', 'servertype': 'cloudpro', 'rdnsdefault': 'notassigned.cloudatcost.com',
+     'netmask': '255.255.255.0', 'ramusage': '763.086', 'mode': 'Normal', 'packageid': '15',
+     'panel_note': 'testnote', 'cpu': '4'}], 'time': 1487000464}
 
-V1_LIST_TEMPLATES_RESPONSE = {u'status': u'ok', u'action': u'listtemplates', u'api': u'v1',
-                              u'data': [{u'ce_id': u'1', u'name': u'CentOS 6.7 64bit'},
-                                        {u'ce_id': u'3', u'name': u'Debian-8-64bit'},
-                                        {u'ce_id': u'9', u'name': u'Windows 7 64bit'},
-                                        {u'ce_id': u'24', u'name': u'Windows 2008 R2 64bit'},
-                                        {u'ce_id': u'25', u'name': u'Windows 2012 R2 64bit'},
-                                        {u'ce_id': u'26', u'name': u'CentOS-7-64bit'},
-                                        {u'ce_id': u'27', u'name': u'Ubuntu-14.04.1-LTS-64bit'},
-                                        {u'ce_id': u'74', u'name': u'FreeBSD-10-1-64bit'}], u'time': 1487027299}
+V1_LIST_TEMPLATES_RESPONSE = {'status': 'ok', 'action': 'listtemplates', 'api': 'v1',
+                              'data': [{'ce_id': '1', 'name': 'CentOS 6.7 64bit'},
+                                        {'ce_id': '3', 'name': 'Debian-8-64bit'},
+                                        {'ce_id': '9', 'name': 'Windows 7 64bit'},
+                                        {'ce_id': '24', 'name': 'Windows 2008 R2 64bit'},
+                                        {'ce_id': '25', 'name': 'Windows 2012 R2 64bit'},
+                                        {'ce_id': '26', 'name': 'CentOS-7-64bit'},
+                                        {'ce_id': '27', 'name': 'Ubuntu-14.04.1-LTS-64bit'},
+                                        {'ce_id': '74', 'name': 'FreeBSD-10-1-64bit'}], 'time': 1487027299}
 
 
 def mocked_requests_get(*args, **kwargs):
