@@ -263,57 +263,54 @@ class CACPy(object):
         return self._make_request(RESOURCE_URL,
                                   type="GET")
 
-    def get_template(self, desc=None, template_id=None):
+    def get_template(self, lookup=None):
         """Return a CACTemplate after querying the Cloudatcost API for a list of templates for a match.
 
         Required Arguments:
-        api_connection - CACPy object to use for connection
-        desc - Description to be matched (or use template_id)
-        template_id - Template ID to be matched (or use desc)
+        lookup - Description or id to be matched
 
         Raises:
         LookupError if desc or template_id can't be found
         ValueError if no lookup parameters are provided
         """
-        if isinstance(template_id, int):
-            template_id = str(template_id)
+        if isinstance(lookup, int):
+            lookup = str(lookup)
         templates = self.get_template_info()['data']
 
-        if template_id is not None:
+        if lookup is not None:
             try:
-                template = next(template for template in templates if template.get('ce_id') == template_id)
+                template = next(t for t in templates
+                                if t.get('ce_id') == lookup or t.get('name') == lookup)
             except StopIteration:
-                raise LookupError("Template with ID: " + template_id + " was not found")
-            return CACTemplate(template.get('name'), template_id)
-        elif desc is not None:
-            try:
-                template = next(template for template in templates if template.get('name') == desc)
-            except StopIteration:
-                raise LookupError("Template with description: " + desc + " was not found")
-            return CACTemplate(desc, template.get('ce_id'))
+                raise LookupError("Template with ID or description: " + lookup + " was not found")
+            return CACTemplate(template.get('name'), template.get('ce_id'))
         else:
-            raise ValueError("One of 'desc' or 'template_id' must be provided to template lookup.")
+            raise ValueError("Must provide an id or description to lookup.")
 
     def get_server(self, sid=None, label=None):
-        """Get a CACServer Instance.
+        """
+        Use the CAC API to search for the provided sid or label
+        and return the first match found as a CACServer instance.
 
-        If neither sid nor label are specified, returns an empty instance.
-        If both sid and label are specified, sid takes precedence.
+        Returns None if no server found.
 
         :param sid: Server ID to lookup
         :param label: Server label to lookup
         :return: CACServer Instance
         """
-        for key,value in (('sid', sid ), ('label', label)):
-            if value is not None:
-                try:
-                    server = next(
-                        server for server in self.get_server_info().get('data') if server[key] == value)
-                except StopIteration:
-                    raise LookupError("Server with " + key + ": " + value + " was not found.")
-                return CACServer(self, **server)
+        assert sid is not None or label is not None
 
-        return CACServer(self)
+        try:
+            server = next(
+                server for server in self.get_server_info().get('data') if
+                server['sid'] == str(sid) or server['label'] == label)
+        except StopIteration:
+            return None
+
+        server['api'] = self
+        return CACServer(**{getattr(skey, 'name'): server.get(getattr(skey, 'name'), None) for skey in
+                            attr.fields(CACServer)})
+
 
 @attr.s
 class CACTemplate(object):
@@ -324,45 +321,62 @@ class CACTemplate(object):
     template_id = attr.ib(convert=str)
 
 
+@attr.s()
 class CACServer(object):
     """Represent a server instance at cloudatost.
     """
 
-    __attrs__ = ('uid', 'servername', 'sdate', 'sid', 'label', 'rdns', 'cpu', 'ram', 'storage', 'panel_note',
-                 'rootpass', 'ip', 'netmask', 'gateway', 'status', 'mode', 'servertype', 'ramusage', 'cpuusage',
-                 'hdusage')
+    api = attr.ib(validator=attr.validators.instance_of(CACPy))
+    uid = attr.ib(default=None)
+    servername = attr.ib(default=None)
+    sdate = attr.ib(default=None)
+    sid = attr.ib(default=None)  # Should only ever be set by API.
+    label = attr.ib(default=None)
+    rdns = attr.ib(default=None)
+    cpu = attr.ib(default=1)
+    ram = attr.ib(default=512)
+    storage = attr.ib(default=10)
+    panel_note = attr.ib(default=None)
+    rootpass = attr.ib(default=None)
+    ip = attr.ib(default=None)
+    netmask = attr.ib(default=None)
+    gateway = attr.ib(default=None)
+    status = attr.ib(default=None)  # 'Powered On', 'Powered Off', 'Pending On'
+    mode = attr.ib(default=None)  # 'Normal', 'Safe'
+    servertype = attr.ib(default=None)  # 'cloudpro'
+    template = attr.ib(default=None)
+    ramusage = attr.ib(default=None)
+    cpuusage = attr.ib(default=None)
+    hdusage = attr.ib(default=None)
 
-    def __init__(self, api_connection, template=None, **kwargs):
-        assert isinstance(api_connection, CACPy)
+    _editable_after_create = ('label','rdns','status','mode')
+    _required_for_build = ('cpu','ram','storage','os')
 
-        self.api_connection = api_connection
-
-        [setattr(self, name, kwargs.get(name)) for name in CACServer.__attrs__]
-
-        if template is not None:
-            self.template = api_connection.get_template(desc=template)
+    def __attrs_post_init__(self):
+        if self.template is not None:
+            self.template = self.api.get_template(self.template)
 
     def __repr__(self):
-        return ('{cls.__name__}(api_account={self.api_connection.email}, sid={self.sid}, '
+        return ('{cls.__name__}(api_account={self.api.email}, sid={self.sid}, '
                 'label={self.label})').format(
             cls=type(self), self=self)
 
+    def update(self):
+        # Only update existing records.
+        if self.sid is None:
+            raise AttributeError("Server update failed. sid property not set on CACServer object.")
 
-        # class Ram(object):
-        #     def __init__(self, name, default=None):
-        #         self.name = name
-        #         self.default = default
-        #
-        #     def __get__(self, instance, owner):
-        #         return getattr(instance, self.name, self.default)
-        #
-        #     def clean(self, value):
-        #         if isinstance(value, int) or str(value).isdigit():
-        #             return int(value)
-        #         return value
-        #
-        #     def __set__(self, instance, value):
-        #         if isinstance(self.clean(value), int):
-        #             setattr(instance, self.name, value)
-        #         else:
-        #             raise TypeError('`{}` not a valid integer'.format(value))
+        current = self.api.get_server(sid=self.sid)
+
+        if current is None:
+            raise LookupError("Unable to find server with sid: " + str(self.sid))
+
+        changed_attrs = [attribute.name for attribute in attr.fields(self.__class__) if
+                         getattr(self, attribute.name) != getattr(current, attribute.name)]
+
+        modified_immutables = [a for a in changed_attrs if a not in self.__class__._editable_after_create]
+
+        if len(modified_immutables) > 0:
+            raise AttributeError("(" + ", ".join(modified_immutables) + ") can not be changed.")
+
+
